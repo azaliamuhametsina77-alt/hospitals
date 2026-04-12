@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #fbfbfb;
+      --panel: #ffffff;
+      --text: #111111;
+      --muted: #666666;
+      --line: #dfdfdf;
+      --grid: #e6e6e6;
+
+      --type1: #5b88d6;
+      --type2: #d99696 ;
+      --type3: #d9e2f1 ;
+      --type4: #f0c46a;
+
+      --accent: #6b5fc9;
+      --shadow: 0 10px 24px rgba(0, 0, 0, 0.05);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Montserrat", sans-serif;
+    }
+
+    .wrap {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 16px 18px 24px;
+      background: var(--bg);
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+    }
+
+    .tab {
+      appearance: none;
+      border: 1px solid #d5d5d5;
+      background: #ffffff;
+      color: var(--text);
+      border-radius: 999px;
+      padding: 10px 14px;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all .18s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .tab:hover {
+      border-color: #bfbfbf;
+      transform: translateY(-1px);
+    }
+
+    .tab.is-active {
+      background: #111111;
+      color: #ffffff;
+      border-color: #111111;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 18px;
+      margin-top: 18px;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      line-height: 1.2;
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    .legend-swatch {
+      width: 13px;
+      height: 13px;
+      border-radius: 3px;
+      display: inline-block;
+      flex: 0 0 13px;
+    }
+
+    .panel {
+      margin-top: 18px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px 16px 14px;
+    }
+
+    .panel-title {
+      margin: 0 0 10px 0;
+      font-size: 22px;
+      line-height: 1.15;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .chart-box {
+      position: relative;
+      width: 100%;
+      background: #ffffff;
+      border-radius: 16px;
+      min-height: 860px;
+    }
+
+    .footer-note {
+      margin-top: 12px;
+      font-size: 13px;
+      line-height: 1.58;
+      color: var(--muted);
+    }
+
+    .source {
+      margin-top: 10px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #d9d9d9;
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--muted);
+    }
+
+    .source a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .source a:hover {
+      text-decoration: underline;
+    }
+
+    @media (max-width: 760px) {
+      .wrap { padding: 14px 14px 22px; }
+      .panel { padding: 14px 12px 12px; }
+      .panel-title { font-size: 18px; }
+      .chart-box { min-height: 760px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div id="typeTabs" class="controls" aria-label="Тип учреждения"></div>
+
+    <div class="legend" aria-hidden="true">
+      <span class="legend-item"><span class="legend-swatch" style="background: var(--type1)"></span> Работают</span>
+      <span class="legend-item"><span class="legend-swatch" style="background: var(--type2)"></span> Не работают</span>
+      <span class="legend-item"><span class="legend-swatch" style="background: var(--type3)"></span> Нет данных</span>
+      <span class="legend-item"><span class="legend-swatch" style="background: var(--type4)"></span> Запланированы / закрыты</span>
+    </div>
+
+    <section class="panel">
+      <h2 id="panelTitle" class="panel-title"></h2>
+      <div class="chart-box">
+        <canvas id="stackedChart"></canvas>
+      </div>
+    </section>
+
+    <div class="footer-note">
+      <p><strong>Пункт семейной медицины</strong> — небольшое учреждение первичной помощи: прививки, простые консультации, наблюдение за беременными и детьми, профилактика.</p>
+      <p><strong>Центр семейной медицины</strong> — то же учреждение первичной помощи, но крупнее и с более широким набором услуг.</p>
+      <p><strong>Сельская больница</strong> — переходный уровень между первичной и более сложной помощью: стационар, базовая неотложная помощь, направление к специалистам.</p>
+      <p><strong>Больница</strong> — вторичная или специализированная помощь: хирургия, реанимация, узкие специалисты.</p>
+    </div>
+
+    <div class="source">
+      Диаграмма: Азалия Мухаметшина, 2026 · Источник:
+      <a href="https://cdn.who.int/media/docs/default-source/documents/emergencies/herams/herams-sudan-baseline-report-2025-operational-status-of-the-health-system.pdf?sfvrsn=1f025930_5&download=true" target="_blank" rel="noopener noreferrer">
+        WHO HeRAMS Sudan, система ВОЗ для мониторинга наличия медицинских ресурсов и услуг
+      </a>
+    </div>
+  </div>
+
+  <script>
+    const stateNames = {
+      "ABYEI PCA": "Абьей",
+      "AJ JAZIRAH": "Аль-Джазира",
+      "BLUE NILE": "Голубой Нил",
+      "CENTRAL DARFUR": "Центральный Дарфур",
+      "EAST DARFUR": "Восточный Дарфур",
+      "GEDAREF": "Аль-Кадариф",
+      "KASSALA": "Кассала",
+      "KHARTOUM": "Хартум",
+      "NORTH DARFUR": "Северный Дарфур",
+      "NORTH KORDOFAN": "Северный Кордофан",
+      "NORTHERN": "Северный",
+      "RED SEA": "Красное море",
+      "RIVER NILE": "Река Нил",
+      "SENNAR": "Сеннар",
+      "SOUTH DARFUR": "Южный Дарфур",
+      "SOUTH KORDOFAN": "Южный Кордофан",
+      "WEST DARFUR": "Западный Дарфур",
+      "WEST KORDOFAN": "Западный Кордофан",
+      "WHITE NILE": "Белый Нил"
+    };
+
+    const rows = [
+      ["ABYEI PCA","-","-","-","-",1,"-","-","-",2,"-","-",1,1,2,"-",2,"-",2,"-",3,4,4,"-",6],
+      ["AJ JAZIRAH",10,3,12,9,20,12,18,16,27,169,178,97,52,177,176,109,"-","-","-","-",109,361,384,231],
+      ["BLUE NILE",5,"-","-","-",8,1,"-","-",56,24,2,2,66,12,"-",4,3,"-","-","-",138,37,2,6],
+      ["CENTRAL DARFUR",3,"-","-","-",1,"-","-","-",32,"-","-","-",42,"-",1,"-",6,"-","-","-",84,"-",1,"-"],
+      ["EAST DARFUR","-","-","-","-",1,"-","-","-",4,"-","-","-",19,"-","-","-",2,"-","-","-",26,"-","-","-"],
+      ["GEDAREF",6,"-","-","-",30,"-","-","-",206,6,18,18,114,"-",1,3,"-","-","-","-",356,6,19,21],
+      ["KASSALA",29,"-",4,"-",14,2,"-",2,148,36,13,13,202,13,9,18,"-","-","-",1,393,51,26,34],
+      ["KHARTOUM",16,66,"-",4,11,4,"-","-",4,160,"-",10,74,489,"-",18,"-","-","-","-",105,719,"-",32],
+      ["NORTH DARFUR",3,"-","-","-","-","-","-","-",16,8,1,"-",15,13,"-","-",2,"-","-",1,36,21,1,1],
+      ["NORTH KORDOFAN",1,3,1,"-",5,16,6,"-",2,294,72,1,3,149,58,"-","-",12,"-",4,11,474,137,5],
+      ["NORTHERN",4,"-","-","-",22,"-",2,"-",89,"-",23,76,77,"-",10,11,"-","-","-","-",192,"-",35,87],
+      ["RED SEA",11,"-",2,"-",13,3,"-",2,76,49,"-",12,110,11,3,5,3,"-","-","-",213,63,5,19],
+      ["RIVER NILE",3,"-","-",1,27,1,1,"-",76,20,9,21,196,33,6,13,"-","-","-","-",302,54,16,35],
+      ["SENNAR",7,"-","-",2,19,"-","-",1,53,"-",103,25,101,"-",11,14,"-","-","-","-",180,"-",114,42],
+      ["SOUTH DARFUR",1,"-",1,"-",4,"-",10,"-",15,"-",200,"-",48,"-",144,2,"-","-","-","-",68,"-",355,2],
+      ["SOUTH KORDOFAN",3,"-","-","-",1,"-","-",2,39,1,4,77,67,"-","-",42,"-","-","-","-",110,1,4,121],
+      ["WEST DARFUR",3,"-","-","-",4,"-","-","-",2,"-",2,"-",32,3,2,1,2,"-","-",2,43,3,4,3],
+      ["WEST KORDOFAN",1,"-",5,"-",2,"-",19,"-","-","-",151,"-",1,"-",206,"-","-","-","-","-",4,"-",381,"-"],
+      ["WHITE NILE",21,"-",1,"-",1,"-","-","-",105,4,5,12,63,1,2,"-","-","-","-","-",190,5,8,12]
+    ];
+
+    const columns = [
+      "State",
+      "Hospital_O","Hospital_N_O","Hospital_N_R","Hospital_P_C",
+      "Rural_O","Rural_N_O","Rural_N_R","Rural_P_C",
+      "FHU_O","FHU_N_O","FHU_N_R","FHU_P_C",
+      "FHC_O","FHC_N_O","FHC_N_R","FHC_P_C",
+      "Other_O","Other_N_O","Other_N_R","Other_P_C",
+      "Total_O","Total_N_O","Total_N_R","Total_P_C"
+    ];
+
+    const facilityTypes = [
+      { key: "total", label: "Все типы", cols: ["Total_O","Total_N_O","Total_N_R","Total_P_C"], max: null },
+      { key: "hospital", label: "Больницы", cols: ["Hospital_O","Hospital_N_O","Hospital_N_R","Hospital_P_C"], max: 100 },
+      { key: "rural", label: "Сельские больницы", cols: ["Rural_O","Rural_N_O","Rural_N_R","Rural_P_C"], max: 80 },
+      { key: "fhu", label: "Пункты семейной медицины", cols: ["FHU_O","FHU_N_O","FHU_N_R","FHU_P_C"], max: 500 },
+      { key: "fhc", label: "Центры семейной медицины", cols: ["FHC_O","FHC_N_O","FHC_N_R","FHC_P_C"], max: 600 }
+    ];
+
+    const statusLabels = ["Работают", "Не работают", "Нет данных", "Запланированы / закрыты"];
+    const statusColors = ["#5b88d6", "#d99696", "#d9e2f1", "#f0c46a"];
+
+    const toNumber = (value) => {
+      if (value === "-" || value === "" || value === null || typeof value === "undefined") return 0;
+      return Number(value);
+    };
+
+    const data = rows.map(row => {
+      const obj = {};
+      columns.forEach((col, idx) => { obj[col] = row[idx]; });
+      return obj;
+    });
+
+    let activeType = facilityTypes[0].key;
+
+    const tabsEl = document.getElementById("typeTabs");
+    const panelTitleEl = document.getElementById("panelTitle");
+
+    function renderTabs() {
+      tabsEl.innerHTML = "";
+      facilityTypes.forEach(type => {
+        const btn = document.createElement("button");
+        btn.className = `tab${type.key === activeType ? " is-active" : ""}`;
+        btn.type = "button";
+        btn.textContent = type.label;
+        btn.addEventListener("click", () => {
+          activeType = type.key;
+          renderTabs();
+          updateChart();
+        });
+        tabsEl.appendChild(btn);
+      });
+    }
+
+    function getActiveTypeMeta() {
+      return facilityTypes.find(item => item.key === activeType);
+    }
+
+    function buildChartData() {
+      const meta = getActiveTypeMeta();
+      const [oCol, noCol, nrCol, pcCol] = meta.cols;
+
+      const enriched = data.map(row => {
+        const o = toNumber(row[oCol]);
+        const no = toNumber(row[noCol]);
+        const nr = toNumber(row[nrCol]);
+        const pc = toNumber(row[pcCol]);
+        return {
+          state: stateNames[row.State] || row.State,
+          o, no, nr, pc,
+          total: o + no + nr + pc
+        };
+      }).sort((a, b) => b.total - a.total);
+
+      return {
+        labels: enriched.map(d => d.state),
+        totals: enriched.map(d => d.total),
+        datasets: [
+          { label: statusLabels[0], data: enriched.map(d => d.o), backgroundColor: statusColors[0], borderWidth: 0, borderRadius: 0, barPercentage: 0.9, categoryPercentage: 0.88 },
+          { label: statusLabels[1], data: enriched.map(d => d.no), backgroundColor: statusColors[1], borderWidth: 0, borderRadius: 0, barPercentage: 0.9, categoryPercentage: 0.88 },
+          { label: statusLabels[2], data: enriched.map(d => d.nr), backgroundColor: statusColors[2], borderWidth: 0, borderRadius: 0, barPercentage: 0.9, categoryPercentage: 0.88 },
+          { label: statusLabels[3], data: enriched.map(d => d.pc), backgroundColor: statusColors[3], borderWidth: 0, borderRadius: 0, barPercentage: 0.9, categoryPercentage: 0.88 }
+        ]
+      };
+    }
+
+    const bgPlugin = {
+      id: "customCanvasBackgroundColor",
+      beforeDraw(chart, args, options) {
+        const { ctx, canvas } = chart;
+        ctx.save();
+        ctx.globalCompositeOperation = "destination-over";
+        ctx.fillStyle = options.color || "#ffffff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.restore();
+      }
+    };
+
+    Chart.defaults.font.family = "Montserrat";
+
+    const ctx = document.getElementById("stackedChart");
+    const chart = new Chart(ctx, {
+      type: "bar",
+      data: buildChartData(),
+      plugins: [bgPlugin],
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        indexAxis: "y",
+        animation: { duration: 350 },
+        layout: {
+          padding: { top: 8, right: 10, bottom: 6, left: 6 }
+        },
+        interaction: { mode: "nearest", intersect: true },
+        onHover: (event, activeElements, chart) => {
+          chart.canvas.style.cursor = activeElements.length ? "pointer" : "default";
+        },
+        plugins: {
+          customCanvasBackgroundColor: { color: "#ffffff" },
+          legend: { display: false },
+          tooltip: {
+            enabled: true,
+            backgroundColor: "rgba(26, 26, 26, 0.92)",
+            titleColor: "#ffffff",
+            bodyColor: "#ffffff",
+            borderColor: "rgba(255,255,255,0.14)",
+            borderWidth: 1,
+            displayColors: false,
+            padding: 12,
+            titleFont: { family: "Montserrat", size: 14, weight: "700" },
+            bodyFont: { family: "Montserrat", size: 13, weight: "600" },
+            footerFont: { family: "Montserrat", size: 12, weight: "600" },
+            callbacks: {
+              title: () => "",
+              label: (context) => {
+                const total = context.chart.data.datasets.reduce((sum, ds) => sum + (Number(ds.data[context.dataIndex]) || 0), 0);
+                const value = Number(context.raw) || 0;
+                const pct = total ? Math.round((value / total) * 100) : 0;
+                return `${context.dataset.label}: ${new Intl.NumberFormat("ru-RU").format(value)} (${pct}%)`;
+              },
+              footer: (items) => {
+                const total = items[0].chart.data.datasets.reduce((sum, ds) => sum + (Number(ds.data[items[0].dataIndex]) || 0), 0);
+                return `Всего: ${new Intl.NumberFormat("ru-RU").format(total)}`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            stacked: true,
+            beginAtZero: true,
+            grid: { color: "#e6e6e6", drawBorder: false },
+            ticks: {
+              color: "#8a8a8a",
+              padding: 8,
+              font: { family: "Montserrat", size: 12, weight: "500" }
+            },
+            border: { display: false }
+          },
+          y: {
+            stacked: true,
+            afterFit(scale) { scale.width = 170; },
+            grid: { display: false },
+            ticks: {
+              color: "#7a7a7a",
+              padding: 10,
+              crossAlign: "far",
+              font: { family: "Montserrat", size: 13, weight: "500" }
+            },
+            border: { display: false }
+          }
+        }
+      }
+    });
+
+    function updateChart() {
+      const meta = getActiveTypeMeta();
+      const built = buildChartData();
+
+      panelTitleEl.textContent = meta.title;
+      chart.data.labels = built.labels;
+      chart.data.datasets.forEach((dataset, index) => {
+        dataset.data = built.datasets[index].data;
+      });
+
+      const maxTotal = built.totals.reduce((max, value) => Math.max(max, value), 0);
+      chart.options.scales.x.max = meta.max || (Math.ceil(maxTotal / 50) * 50 + 50);
+
+      const chartBox = document.querySelector(".chart-box");
+      if (chartBox) {
+        chartBox.style.minHeight = `${Math.max(760, built.labels.length * 42 + 70)}px`;
+      }
+
+      chart.update();
+    }
+
+    renderTabs();
+    updateChart();
+  </script>
+</body>
+</html>
